@@ -1,36 +1,33 @@
-import sagemaker
+import boto3
 
-sm_client = boto3.client("sagemaker")
+sm = boto3.client('sagemaker')
 
-model_name = "GenAIONNXModel"
-
-container = {
-    "Image": "763104351884.dkr.ecr.us-east-1.amazonaws.com/pytorch-inference:1.9.1-cpu-py38",
-    "ModelDataUrl": f"s3://{bucket_name}/model.onnx",
-    "Environment": {"SAGEMAKER_MODEL_SERVER_WORKERS": "1"},
-}
-
-response = sm_client.create_model(
-    ModelName=model_name,
-    ExecutionRoleArn="arn:aws:iam::your-account-id:role/service-role/AmazonSageMaker-ExecutionRole",
-    PrimaryContainer=container,
+response = sm.create_model(
+    ModelName='gpt2-inference-model',
+    PrimaryContainer={
+        'Image': '<your_ecr_image_url>',
+        'Mode': 'SingleModel',
+        'Environment': {
+            'SAGEMAKER_PROGRAM': 'inference-server.py',
+            'SAGEMAKER_SUBMIT_DIRECTORY': '/app'
+        }
+    },
+    ExecutionRoleArn='<your_sagemaker_execution_role>'
 )
 
-endpoint_config_name = "GenAIONNXEndpointConfig"
-
-sm_client.create_endpoint_config(
-    EndpointConfigName=endpoint_config_name,
+response = sm.create_endpoint_config(
+    EndpointConfigName='gpt2-endpoint-config',
     ProductionVariants=[
         {
-            "InstanceType": "ml.m5.large",
-            "InitialInstanceCount": 1,
-            "ModelName": model_name,
-            "VariantName": "AllTraffic",
+            'InstanceType': 'ml.m5.large',
+            'InitialInstanceCount': 1,
+            'ModelName': 'gpt2-inference-model',
+            'VariantName': 'AllTraffic'
         }
-    ],
+    ]
 )
 
-sm_client.create_endpoint(
-    EndpointName="GenAIONNXEndpoint",
-    EndpointConfigName=endpoint_config_name,
+response = sm.create_endpoint(
+    EndpointName='gpt2-inference-endpoint',
+    EndpointConfigName='gpt2-endpoint-config'
 )
